@@ -105,6 +105,12 @@ namespace Hospital.Services
             _unitOfWork = unitOfWork;
         }
 
+        /// <summary>
+        /// Delete Hospital Info By it's Id
+        /// </summary>
+        /// <param name="id"></param>
+
+
         public void DeleteHospitalInfo(int id)
         {
             var model = _unitOfWork.GenericRepository<HospitalInfo>().GetById(id);
