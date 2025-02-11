@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Hospital.Models
 {
@@ -10,10 +11,15 @@ namespace Hospital.Models
         public string Address { get; set; }
         public DateTime DOB { get; set; }
         public string Specialist { get; set; }
+        public bool IsDoctor {  get; set; }
+        public string PictureUrl { get; set; }
         public Department Department { get; set; }
-        public ICollection<Appointment> Appointments { get; set; }   
+        [NotMapped]
+        public ICollection<Appointment> Appointments { get; set; }
+        [NotMapped]
         public ICollection<Payroll>Payrolls { get; set; }
-
+        [NotMapped]
+        public ICollection<PatientReport> PatientReports { get; set; }
     }
 }
 

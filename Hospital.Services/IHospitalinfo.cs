@@ -1,9 +1,9 @@
-﻿using Hospital.ViewModels;
-using System.Linq.Dynamic.Core;
+﻿using Hospital.Utility;
+using Hospital.ViewModels;
 
 namespace Hospital.Services
 {
-    public interface IHospitalinfo
+    public interface IHospitalInfo
     {
         PagedResult<HospitalInfoViewModel> GetAll(int pageNumber,int PageSize);
         HospitalInfoViewModel GetHospitalById(int id);

@@ -1,14 +1,17 @@
 ﻿using Hospital.Repositories.Interface;
+using Microsoft.Extensions.Logging;
 
 namespace Hospital.Repositories.Implementation
 {
     public class UnitOfWork : IUnitOfWork, IDisposable
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILoggerFactory _loggerFactory;
 
-        public UnitOfWork(ApplicationDbContext context)
+        public UnitOfWork(ApplicationDbContext context, ILoggerFactory loggerFactory)
         {
-            _context = context;
+            _context = context ?? throw new ArgumentNullException(nameof(context), "ApplicationDbContext cannot be null.");
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory), "ILoggerFactory cannot be null.");
         }
 
         private bool disposed = false;
@@ -20,20 +23,20 @@ namespace Hospital.Repositories.Implementation
 
         private void Dispose(bool disposing)
         {
-            if(!disposed)
+            if (!disposed)
             {
-                if(disposing)
+                if (disposing)
                 {
                     _context.Dispose();
                 }
             }
-           this.disposed = true;
+            disposed = true;
         }
 
         public IGenericRepository<T> GenericRepository<T>() where T : class
         {
-           IGenericRepository<T> repo = new GenericRepository<T>(_context);
-            return repo;
+            var logger = _loggerFactory.CreateLogger<GenericRepository<T>>();
+            return new GenericRepository<T>(_context, logger);
         }
 
         public void Save()

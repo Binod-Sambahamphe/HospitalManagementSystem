@@ -11,7 +11,6 @@ using System.Text.Encodings.Web;
 using System.Threading;
 using System.Threading.Tasks;
 using Hospital.Models;
-using Hospital.Utility;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -23,7 +22,7 @@ using Microsoft.Extensions.Logging;
 
 namespace HospitalManagementSystem.Areas.Identity.Pages.Account
 {
-    public class RegisterModel : PageModel
+    public class DoctorRegisterModel : PageModel
     {
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly UserManager<IdentityUser> _userManager;
@@ -31,15 +30,13 @@ namespace HospitalManagementSystem.Areas.Identity.Pages.Account
         private readonly IUserEmailStore<IdentityUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
         private readonly IEmailSender _emailSender;
-        private IWebHostEnvironment _webHostEnvironment;
 
-        public RegisterModel(
+        public DoctorRegisterModel(
             UserManager<IdentityUser> userManager,
             IUserStore<IdentityUser> userStore,
             SignInManager<IdentityUser> signInManager,
             ILogger<RegisterModel> logger,
-            IEmailSender emailSender,
-           IWebHostEnvironment webHostEnvironment)
+            IEmailSender emailSender)
         {
             _userManager = userManager;
             _userStore = userStore;
@@ -47,7 +44,6 @@ namespace HospitalManagementSystem.Areas.Identity.Pages.Account
             _signInManager = signInManager;
             _logger = logger;
             _emailSender = emailSender;
-            _webHostEnvironment = webHostEnvironment;
         }
 
         /// <summary>
@@ -102,18 +98,22 @@ namespace HospitalManagementSystem.Areas.Identity.Pages.Account
             [Display(Name = "Confirm password")]
             [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
             public string ConfirmPassword { get; set; }
-
             public string Name { get; set; }
             public Gender Gender { get; set; }
             public string Nationality { get; set; }
             public string Address { get; set; }
             public DateTime DOB { get; set; }
-
+            public string Specialist { get; set; }
+            public bool IsDoctor { get; set; }
             public IFormFile PictureUrl { get; set; }
 
-
-
         }
+
+
+
+
+
+
 
 
         public async Task OnGetAsync(string returnUrl = null)
@@ -129,16 +129,6 @@ namespace HospitalManagementSystem.Areas.Identity.Pages.Account
             if (ModelState.IsValid)
             {
                 var user = CreateUser();
-                user.Name = Input.Name;
-                user.Address = Input.Address;
-                user.Nationality = Input.Nationality;
-                user.DOB = Input.DOB;
-                user.Gender = Input.Gender;
-                //ImageOperations image = new ImageOperations(_webHostEnvironment);
-                //string filename = image.ImageUploadAsync(Input.PictureUrl);
-                ImageOperations image = new ImageOperations(_webHostEnvironment);
-                string filename = await image.ImageUploadAsync(Input.PictureUrl); 
-                user.PictureUrl = filename;
 
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
                 await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
@@ -147,7 +137,6 @@ namespace HospitalManagementSystem.Areas.Identity.Pages.Account
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User created a new account with password.");
-                    await _userManager.AddToRoleAsync(user, WebsiteRoles.Website_Patient);
 
                     var userId = await _userManager.GetUserIdAsync(user);
                     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -181,11 +170,11 @@ namespace HospitalManagementSystem.Areas.Identity.Pages.Account
             return Page();
         }
 
-        private ApplicationUser CreateUser()
+        private IdentityUser CreateUser()
         {
             try
             {
-                return Activator.CreateInstance<ApplicationUser>();
+                return Activator.CreateInstance<IdentityUser>();
             }
             catch
             {

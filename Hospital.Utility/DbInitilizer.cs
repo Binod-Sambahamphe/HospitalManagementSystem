@@ -2,6 +2,7 @@
 using Hospital.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Hospital.Utility
 {
@@ -19,7 +20,6 @@ namespace Hospital.Utility
             _roleManager = roleManager;
             _context = context;
         }
-
         public void Initilize()
         {
             try

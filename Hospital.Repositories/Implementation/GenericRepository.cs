@@ -1,93 +1,188 @@
 ﻿using Hospital.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 
 namespace Hospital.Repositories.Implementation
 {
-      public class GenericRepository<T> : IGenericRepository<T> where T : class
+    public class GenericRepository<T> : IGenericRepository<T> where T : class
+    {
+        private readonly DbContext _context;
+        private readonly DbSet<T> _dbSet;
+        private readonly ILogger<GenericRepository<T>> _logger;
+
+        public GenericRepository(DbContext context, ILogger<GenericRepository<T>> logger)
         {
-            private readonly DbContext _context;
-            private readonly DbSet<T> _dbSet;
+            _context = context ?? throw new ArgumentNullException(nameof(context), "DbContext cannot be null.");
+            _dbSet = _context.Set<T>() ?? throw new ArgumentNullException(nameof(_dbSet), "DbSet cannot be null.");
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger), "Logger cannot be null.");
+        }
 
-            public GenericRepository(DbContext context)
+        public IEnumerable<T> GetAll(
+            Expression<Func<T, bool>> filter = null,
+            Func<IQueryable<T>, IOrderedQueryable<T>> orderBy = null,
+            string includeProperties = "")
+        {
+            try
             {
-                _context = context;
-                _dbSet = context.Set<T>();
-            }
-
-            public IEnumerable<T> GetAll(
-                Expression<Func<T, bool>> filter = null,
-                Func<IQueryable<T>, IOrderedQueryable<T>> orderBy = null,
-                string includeProperties = "")
-            {
-                IQueryable<T> query = _dbSet;
+                IQueryable<T> query = _dbSet.AsQueryable();
 
                 if (filter != null)
                 {
                     query = query.Where(filter);
                 }
 
-                foreach (var includeProperty in includeProperties.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                if (!string.IsNullOrWhiteSpace(includeProperties))
                 {
-                    query = query.Include(includeProperty);
+                    foreach (var includeProperty in includeProperties.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        if (typeof(T).GetProperty(includeProperty.Trim()) != null)
+                        {
+                            query = query.Include(includeProperty.Trim());
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"Invalid include property: {includeProperty}");
+                        }
+                    }
                 }
 
-                if (orderBy != null)
+                return orderBy != null ? orderBy(query).ToList() : query.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in GetAll: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        public async Task<IEnumerable<T>> GetAllAsync(
+            Expression<Func<T, bool>> filter = null,
+            Func<IQueryable<T>, IOrderedQueryable<T>> orderBy = null,
+            string includeProperties = "")
+        {
+            try
+            {
+                IQueryable<T> query = _dbSet.AsQueryable();
+
+                if (filter != null)
                 {
-                    return orderBy(query).ToList();
+                    query = query.Where(filter);
                 }
 
-                return query.ToList();
-            }
-
-            public T GetById(object id)
-            {
-                return _dbSet.Find(id);
-            }
-
-            public void Insert(T entity)
-            {
-                _dbSet.Add(entity);
-            }
-
-            public void Delete(object id)
-            {
-                T entityToDelete = _dbSet.Find(id);
-                if (entityToDelete != null)
+                if (!string.IsNullOrWhiteSpace(includeProperties))
                 {
-                    Delete(entityToDelete);
+                    foreach (var includeProperty in includeProperties.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        if (typeof(T).GetProperty(includeProperty.Trim()) != null)
+                        {
+                            query = query.Include(includeProperty.Trim());
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"Invalid include property: {includeProperty}");
+                        }
+                    }
                 }
-            }
 
-            public void Delete(T entity)
+                return orderBy != null ? await orderBy(query).ToListAsync() : await query.ToListAsync();
+            }
+            catch (Exception ex)
             {
-                if (_context.Entry(entity).State == EntityState.Detached)
-                {
-                    _dbSet.Attach(entity);
-                }
-                _dbSet.Remove(entity);
+                _logger.LogError($"Error in GetAllAsync: {ex.Message}", ex);
+                throw;
             }
+        }
 
-            public void Update(T entity)
+        public T GetById(object id)
+        {
+            if (id == null) throw new ArgumentNullException(nameof(id), "ID cannot be null.");
+            return _dbSet.Find(id);
+        }
+
+        public async Task<T> GetByIdAsync(object id)
+        {
+            if (id == null) throw new ArgumentNullException(nameof(id), "ID cannot be null.");
+            return await _dbSet.FindAsync(id);
+        }
+
+        public void Insert(T entity)
+        {
+            if (entity == null) throw new ArgumentNullException(nameof(entity), "Entity cannot be null.");
+            _dbSet.Add(entity);
+        }
+
+        public async Task InsertAsync(T entity)
+        {
+            if (entity == null) throw new ArgumentNullException(nameof(entity), "Entity cannot be null.");
+            await _dbSet.AddAsync(entity);
+        }
+
+        public void Delete(object id)
+        {
+            if (id == null) throw new ArgumentNullException(nameof(id), "ID cannot be null.");
+            var entityToDelete = _dbSet.Find(id);
+            if (entityToDelete != null)
+            {
+                Delete(entityToDelete);
+            }
+        }
+
+        public void Delete(T entity)
+        {
+            if (entity == null) throw new ArgumentNullException(nameof(entity), "Entity cannot be null.");
+            if (_context.Entry(entity).State == EntityState.Detached)
             {
                 _dbSet.Attach(entity);
-                _context.Entry(entity).State = EntityState.Modified;
             }
+            _dbSet.Remove(entity);
+        }
 
-            public void Save()
+        public void Update(T entity)
+        {
+            if (entity == null) throw new ArgumentNullException(nameof(entity), "Entity cannot be null.");
+            _dbSet.Attach(entity);
+            _context.Entry(entity).State = EntityState.Modified;
+        }
+
+        public async Task SaveAsync()
+        {
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in SaveAsync: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        public void Save()
+        {
+            try
             {
                 _context.SaveChanges();
             }
-
-            public void Dispose()
+            catch (Exception ex)
             {
-                _context.Dispose();
+                _logger.LogError($"Error in Save: {ex.Message}", ex);
+                throw;
             }
+        }
+
+        public void Dispose()
+        {
+            _context.Dispose();
+        }
 
         public void Add(T entity)
         {
-            throw new NotImplementedException();
+            if (entity == null)
+           {
+               throw new ArgumentNullException(nameof(entity), "Entity cannot be null.");
+           }
+            _dbSet.Add(entity);
         }
     }
-    }
-
+}

@@ -1,14 +1,25 @@
-﻿namespace Hospital.Utility
-{
-    public class PagedResult<T> where T: class
-    {
-        public PagedResult()
-        {
+﻿//namespace Hospital.Utility
+//{
+//    public class PagedResult<T> where T: class
+//    {
+//        public PagedResult()
+//        {
 
-        }
-        public List<T> Data { get; set; } 
-        public int TotalItems { get; set; } 
+//        }
+//        public List<T> Data { get; set; } 
+//        public int TotalItems { get; set; } 
+//        public int PageNumber { get; set; }
+//        public int PageSize { get; set; }
+//    }
+//}
+namespace Hospital.Utility
+{
+    public class PagedResult<T>
+    {
+        public List<T> Data { get; set; }
+        public int TotalItems { get; set; }
         public int PageNumber { get; set; }
         public int PageSize { get; set; }
     }
 }
+
